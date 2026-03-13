@@ -558,6 +558,7 @@ let accessToken = null;
 let gapiInited = false;
 let gisInited = false;
 let silentLoginAttempt = false;
+let silentLoginTimer  = null;
 
 let drives = [];          // [{id, name, type:'myDrive'|'shared'}]
 let currentDrive = null;
@@ -586,21 +587,44 @@ function gisLoaded() {
   maybeReady();
 }
 
+// ログインフォームを表示するヘルパー
+function showLoginForm() {
+  document.getElementById('silentLoginState').style.display = 'none';
+  document.getElementById('loginForm').style.display = 'flex';
+}
+
 function maybeReady() {
   if (gapiInited && gisInited) {
-    // まずサイレントログインを試みる（prompt:'none' = UIなし）
+    // PWA standalone モード（iPhone ホーム画面起動）は
+    // prompt:'none' が動作しないためスキップ
+    const isStandalone = window.navigator.standalone === true;
+    if (isStandalone) {
+      showLoginForm();
+      return;
+    }
+    // ブラウザモード: サイレントログインを試みる（3秒タイムアウト付き）
     silentLoginAttempt = true;
+    silentLoginTimer = setTimeout(() => {
+      if (silentLoginAttempt) {
+        silentLoginAttempt = false;
+        showLoginForm();
+      }
+    }, 3000);
     tokenClient.requestAccessToken({ prompt: 'none' });
   }
 }
 
 function handleTokenResponse(resp) {
+  // タイムアウトタイマーをキャンセル
+  if (silentLoginTimer) {
+    clearTimeout(silentLoginTimer);
+    silentLoginTimer = null;
+  }
   if (resp.error) {
     if (silentLoginAttempt) {
       // サイレントログイン失敗 → ログインボタンを表示
       silentLoginAttempt = false;
-      document.getElementById('silentLoginState').style.display = 'none';
-      document.getElementById('loginForm').style.display = 'flex';
+      showLoginForm();
       return;
     }
     showStatus('ログインに失敗しました: ' + resp.error, 'error');
@@ -633,8 +657,7 @@ function signOut() {
   folderStack = [];
   isUploading = false;
 
-  document.getElementById('silentLoginState').style.display = 'none';
-  document.getElementById('loginForm').style.display = 'flex';
+  showLoginForm();
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('headerUser').style.display = 'none';
