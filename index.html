@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Drive アップローダー</title>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-dark: #1557b0;
+      --surface: #ffffff;
+      --bg: #f1f3f4;
+      --border: #dadce0;
+      --text: #202124;
+      --text-secondary: #5f6368;
+      --success: #34a853;
+      --error: #ea4335;
+      --radius: 12px;
+      --shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Header ===== */
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .header h1 { font-size: 17px; font-weight: 600; }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #userName {
+      font-size: 12px;
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0.9;
+    }
+    .btn-logout {
+      background: rgba(255,255,255,0.22);
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn-logout:active { background: rgba(255,255,255,0.35); }
+
+    /* ===== Main ===== */
+    .main {
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===== Login ===== */
+    .login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 52px);
+      gap: 28px;
+      text-align: center;
+      padding: 32px 24px;
+    }
+    .login-icon {
+      width: 88px;
+      height: 88px;
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      box-shadow: 0 4px 16px rgba(26,115,232,0.35);
+    }
+    .login-title { font-size: 22px; font-weight: 700; }
+    .login-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin-top: 6px; }
+    .btn-google {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      font-family: inherit;
+      width: 100%;
+      max-width: 300px;
+      justify-content: center;
+      transition: box-shadow 0.15s;
+    }
+    .btn-google:active { box-shadow: none; transform: scale(0.98); }
+    .google-logo { width: 22px; height: 22px; flex-shrink: 0; }
+
+    /* ===== Card ===== */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+    }
+
+    /* ===== Drive Tabs ===== */
+    .drive-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .drive-tabs::-webkit-scrollbar { display: none; }
+    .drive-tab {
+      flex-shrink: 0;
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .drive-tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    /* ===== Breadcrumb ===== */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 2px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .bc-link {
+      color: var(--primary);
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .bc-link:active { text-decoration: underline; }
+    .bc-sep { color: var(--border); padding: 0 2px; }
+    .bc-current { color: var(--text); font-weight: 500; }
+
+    /* ===== Folder list ===== */
+    .btn-back {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 0 10px;
+      font-family: inherit;
+    }
+    .folder-list {
+      list-style: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .folder-item:last-child { border-bottom: none; }
+    .folder-item:active { background: #f1f3f4; }
+    .folder-icon { font-size: 22px; flex-shrink: 0; }
+    .folder-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .folder-arrow { color: #bdc1c6; font-size: 20px; font-weight: 300; flex-shrink: 0; }
+
+    /* ===== Select folder button ===== */
+    .btn-select-folder {
+      display: block;
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px;
+      background: var(--success);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-select-folder:active { background: #2d9248; }
+
+    /* ===== Selected folder display ===== */
+    .selected-folder-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 14px;
+      background: #e8f0fe;
+      border-radius: 10px;
+      border: 1.5px solid #c5d5f8;
+    }
+    .selected-folder-box .fi { font-size: 26px; flex-shrink: 0; }
+    .selected-folder-info { flex: 1; min-width: 0; }
+    .selected-folder-path {
+      font-size: 11px;
+      color: var(--primary);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .selected-folder-name-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .btn-change {
+      background: white;
+      border: 1.5px solid var(--primary);
+      color: var(--primary);
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ===== Upload area ===== */
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .upload-area:active, .upload-area.drag-over {
+      border-color: var(--primary);
+      background: #e8f0fe;
+    }
+    .upload-icon { font-size: 44px; margin-bottom: 10px; }
+    .upload-text { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .upload-hint { font-size: 12px; color: var(--text-secondary); }
+    #fileInput { display: none; }
+
+    /* ===== File list ===== */
+    .file-list { list-style: none; margin-top: 12px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #f8f9fa;
+      border-radius: 9px;
+      margin-bottom: 7px;
+    }
+    .file-type-icon { font-size: 28px; flex-shrink: 0; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-size { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+    .file-status { font-size: 11px; margin-top: 4px; color: var(--text-secondary); }
+    .file-remove {
+      background: none;
+      border: none;
+      color: #bdc1c6;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .file-remove:active { color: var(--error); }
+
+    /* ===== Progress ===== */
+    .progress-bar {
+      height: 4px;
+      background: #e8eaed;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 2px;
+      transition: width 0.25s ease;
+      width: 0%;
+    }
+    .progress-fill.success { background: var(--success); }
+    .progress-fill.error { background: var(--error); }
+
+    /* ===== Upload button ===== */
+    .btn-upload {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: 14px;
+      transition: all 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .btn-upload:active { background: var(--primary-dark); transform: scale(0.99); }
+    .btn-upload:disabled {
+      background: #e8eaed;
+      color: #bdc1c6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ===== Status ===== */
+    .status-msg {
+      padding: 12px 14px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 12px;
+      display: none;
+    }
+    .status-msg.success {
+      background: #e6f4ea;
+      color: #137333;
+      border: 1px solid #ceead6;
+      display: block;
+    }
+    .status-msg.error {
+      background: #fce8e6;
+      color: #c5221f;
+      border: 1px solid #f5c6c4;
+      display: block;
+    }
+
+    /* ===== Loading / Empty ===== */
+    .loading-state, .empty-state {
+      text-align: center;
+      padding: 28px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>📤 Drive アップローダー</h1>
+  <div class="header-right" id="headerUser" style="display:none">
+    <span id="userName"></span>
+    <button class="btn-logout" id="btnLogout">ログアウト</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ===== Login screen ===== -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-icon">📤</div>
+    <div>
+      <div class="login-title">Drive アップローダー</div>
+      <div class="login-desc">
+        Googleアカウントでログインして<br>
+        写真・動画・PDFをアップロードできます
+      </div>
+    </div>
+    <button class="btn-google" id="loginBtn">
+      <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Googleでログイン
+    </button>
+  </div>
+
+  <!-- ===== App screen ===== -->
+  <div id="appScreen" style="display:none">
+
+    <!-- Folder selector card -->
+    <div class="card" id="folderCard">
+      <div class="card-title">アップロード先フォルダ</div>
+
+      <!-- Folder navigator (shown when selecting) -->
+      <div id="folderNav">
+        <div class="drive-tabs" id="driveTabs">
+          <div class="loading-state"><span class="spinner"></span>読み込み中...</div>
+        </div>
+        <div class="breadcrumb" id="breadcrumb" style="display:none"></div>
+        <button class="btn-back" id="btnBack">← 戻る</button>
+        <div id="folderListWrap">
+          <div class="loading-state"><span class="spinner"></span>フォルダを読み込み中...</div>
+        </div>
+        <button class="btn-select-folder" id="btnSelectFolder">このフォルダを選択 ✓</button>
+      </div>
+
+      <!-- Selected folder display (shown after selection) -->
+      <div id="selectedFolderDisplay" style="display:none">
+        <div class="selected-folder-box">
+          <span class="fi">📁</span>
+          <div class="selected-folder-info">
+            <div class="selected-folder-path" id="selectedFolderPath"></div>
+            <div class="selected-folder-name-text" id="selectedFolderNameText"></div>
+          </div>
+          <button class="btn-change" id="btnChange">変更</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File selection card -->
+    <div class="card">
+      <div class="card-title">ファイルを選択</div>
+
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📎</div>
+        <div class="upload-text">タップしてファイルを選択</div>
+        <div class="upload-hint">写真・動画・PDF に対応</div>
+      </div>
+
+      <input type="file" id="fileInput"
+        accept="image/*,video/*,application/pdf,image/heic,image/heif"
+        multiple>
+
+      <ul class="file-list" id="fileList"></ul>
+
+      <div class="status-msg" id="statusMsg"></div>
+
+      <button class="btn-upload" id="btnUpload" disabled>アップロード開始</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Google APIs -->
+<script src="https://apis.google.com/js/api.js" async defer onload="gapiLoaded()"></script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+
+<script>
+'use strict';
+
+// ===== Config =====
+const CLIENT_ID = '736275103789-9epf0ufro4mv93ldhga5k0kjbhk29oou.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive';
+const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+
+// ===== State =====
+let tokenClient = null;
+let accessToken = null;
+let gapiInited = false;
+let gisInited = false;
+
+let drives = [];          // [{id, name, type:'myDrive'|'shared'}]
+let currentDrive = null;
+let folderStack = [];     // [{id, name}]
+let selectedFolder = null; // {id, name, driveName, driveId, isSharedDrive}
+
+let selectedFiles = [];   // File[]
+let isUploading = false;
+
+// ===== GAPI init =====
+function gapiLoaded() {
+  gapi.load('client', async () => {
+    await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
+    gapiInited = true;
+    maybeReady();
+  });
+}
+
+function gisLoaded() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: handleTokenResponse,
+  });
+  gisInited = true;
+  maybeReady();
+}
+
+function maybeReady() {
+  if (gapiInited && gisInited) {
+    document.getElementById('loginBtn').disabled = false;
+  }
+}
+
+function handleTokenResponse(resp) {
+  if (resp.error) {
+    showStatus('ログインに失敗しました: ' + resp.error, 'error');
+    return;
+  }
+  accessToken = resp.access_token;
+  gapi.client.setToken(resp);
+  onSignedIn();
+}
+
+// ===== Auth =====
+function signIn() {
+  if (!gapiInited || !gisInited) {
+    showStatus('初期化中です。しばらく待ってからお試しください。', 'error');
+    return;
+  }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function signOut() {
+  if (accessToken) {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+  }
+  gapi.client.setToken(null);
+  accessToken = null;
+  selectedFiles = [];
+  selectedFolder = null;
+  drives = [];
+  folderStack = [];
+  isUploading = false;
+
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('headerUser').style.display = 'none';
+  document.getElementById('fileList').innerHTML = '';
+  document.getElementById('statusMsg').style.display = 'none';
+  document.getElementById('statusMsg').className = 'status-msg';
+  updateUploadButton();
+}
+
+async function onSignedIn() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('headerUser').style.display = 'flex';
+
+  // Get user info
+  try {
+    const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    });
+    const info = await resp.json();
+    document.getElementById('userName').textContent = info.name || info.email || '';
+  } catch (e) { /* ignore */ }
+
+  await loadDrives();
+}
+
+// ===== Drive loading =====
+async function loadDrives() {
+  const tabsEl = document.getElementById('driveTabs');
+  tabsEl.innerHTML = '<div class="loading-state"><span class="spinner"></span>ドライブを読み込み中...</div>';
+
+  drives = [{ id: 'root', name: 'マイドライブ', type: 'myDrive' }];
+
+  try {
+    let pageToken = null;
+    do {
+      const params = { pageSize: 100 };
+      if (pageToken) params.pageToken = pageToken;
+      const resp = await gapi.client.drive.drives.list(params);
+      const result = resp.result;
+      if (result.drives) {
+        result.drives.forEach(d => drives.push({ id: d.id, name: d.name, type: 'shared' }));
+      }
+      pageToken = result.nextPageToken || null;
+    } while (pageToken);
+  } catch (e) {
+    console.warn('共有ドライブを取得できませんでした:', e);
+  }
+
+  renderDriveTabs();
+  selectDrive(drives[0]);
+}
+
+function renderDriveTabs() {
+  const tabsEl = document.getElementById('driveTabs');
+  tabsEl.innerHTML = '';
+  drives.forEach((d, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'drive-tab' + (i === 0 ? ' active' : '');
+    btn.id = 'driveTab_' + d.id;
+    btn.textContent = (d.type === 'shared' ? '🏢 ' : '💾 ') + d.name;
+    btn.addEventListener('click', () => selectDrive(d));
+    tabsEl.appendChild(btn);
+  });
+}
+
+function selectDrive(drive) {
+  currentDrive = drive;
+  folderStack = [{ id: drive.id, name: drive.name }];
+
+  drives.forEach(d => {
+    const tab = document.getElementById('driveTab_' + d.id);
+    if (tab) tab.className = 'drive-tab' + (d.id === drive.id ? ' active' : '');
+  });
+
+  updateBreadcrumb();
+  document.getElementById('btnBack').style.display = 'none';
+  loadFolders(drive.id);
+}
+
+async function loadFolders(parentId) {
+  const wrap = document.getElementById('folderListWrap');
+  wrap.innerHTML = '<div class="loading-state"><span class="spinner"></span>読み込み中...</div>';
+
+  try {
+    let folders = [];
+    let pageToken = null;
+    const isShared = currentDrive && currentDrive.type === 'shared';
+
+    do {
+      const params = {
+        q: `mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`,
+        fields: 'nextPageToken, files(id, name)',
+        orderBy: 'name',
+        pageSize: 200,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      };
+      if (isShared) {
+        params.corpora = 'drive';
+        params.driveId = currentDrive.id;
+      }
+      if (pageToken) params.pageToken = pageToken;
+
+      const resp = await gapi.client.drive.files.list(params);
+      const result = resp.result;
+      if (result.files) folders = folders.concat(result.files);
+      pageToken = result.nextPageToken || null;
+    } while (pageToken);
+
+    renderFolderList(folders);
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty-state" style="color:var(--error)">⚠️ 読み込みエラー: ${escHtml(e.message)}</div>`;
+  }
+
+  // Update select button visibility
+  const canSelect = folderStack.length > 1 || (currentDrive && currentDrive.type === 'shared');
+  document.getElementById('btnSelectFolder').style.display = canSelect ? 'block' : 'none';
+}
+
+function renderFolderList(folders) {
+  const wrap = document.getElementById('folderListWrap');
+  if (folders.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">📂 サブフォルダはありません</div>';
+    return;
+  }
+
+  const ul = document.createElement('ul');
+  ul.className = 'folder-list';
+
+  folders.forEach(f => {
+    const li = document.createElement('li');
+    li.className = 'folder-item';
+    li.innerHTML = `
+      <span class="folder-icon">📁</span>
+      <span class="folder-name">${escHtml(f.name)}</span>
+      <span class="folder-arrow">›</span>
+    `;
+    li.addEventListener('click', () => openFolder(f.id, f.name));
+    ul.appendChild(li);
+  });
+
+  wrap.innerHTML = '';
+  wrap.appendChild(ul);
+}
+
+function openFolder(folderId, folderName) {
+  folderStack.push({ id: folderId, name: folderName });
+  updateBreadcrumb();
+  document.getElementById('btnBack').style.display = 'flex';
+  document.getElementById('btnSelectFolder').style.display = 'block';
+  loadFolders(folderId);
+}
+
+function goBack() {
+  if (folderStack.length > 1) {
+    folderStack.pop();
+    updateBreadcrumb();
+    const current = folderStack[folderStack.length - 1];
+    loadFolders(current.id);
+    document.getElementById('btnBack').style.display = folderStack.length > 1 ? 'flex' : 'none';
+  }
+}
+
+function updateBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  if (folderStack.length <= 1) {
+    bc.style.display = 'none';
+    return;
+  }
+  bc.style.display = 'flex';
+  bc.innerHTML = folderStack.map((item, i) => {
+    if (i === folderStack.length - 1) {
+      return `<span class="bc-current">${escHtml(item.name)}</span>`;
+    }
+    return `<span class="bc-link" data-idx="${i}">${escHtml(item.name)}</span><span class="bc-sep"> › </span>`;
+  }).join('');
+
+  bc.querySelectorAll('.bc-link').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx, 10);
+      folderStack = folderStack.slice(0, idx + 1);
+      updateBreadcrumb();
+      loadFolders(folderStack[folderStack.length - 1].id);
+      document.getElementById('btnBack').style.display = folderStack.length > 1 ? 'flex' : 'none';
+    });
+  });
+}
+
+function selectCurrentFolder() {
+  const current = folderStack[folderStack.length - 1];
+  selectedFolder = {
+    id: current.id,
+    name: current.name,
+    driveName: currentDrive ? currentDrive.name : '',
+    driveId: currentDrive ? currentDrive.id : null,
+    isSharedDrive: !!(currentDrive && currentDrive.type === 'shared'),
+  };
+
+  // Show selected folder display
+  document.getElementById('folderNav').style.display = 'none';
+  document.getElementById('selectedFolderDisplay').style.display = 'block';
+  document.getElementById('selectedFolderPath').textContent = selectedFolder.driveName || 'マイドライブ';
+  document.getElementById('selectedFolderNameText').textContent = selectedFolder.name;
+
+  updateUploadButton();
+}
+
+function changeFolder() {
+  document.getElementById('folderNav').style.display = 'block';
+  document.getElementById('selectedFolderDisplay').style.display = 'none';
+}
+
+// ===== File selection =====
+function onFilesSelected(files) {
+  Array.from(files).forEach(f => {
+    if (!selectedFiles.find(sf => sf.name === f.name && sf.size === f.size)) {
+      selectedFiles.push(f);
+    }
+  });
+  document.getElementById('fileInput').value = '';
+  renderFileList();
+  updateUploadButton();
+}
+
+function removeFile(index) {
+  if (isUploading) return;
+  selectedFiles.splice(index, 1);
+  renderFileList();
+  updateUploadButton();
+}
+
+function renderFileList() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  selectedFiles.forEach((f, i) => {
+    const li = document.createElement('li');
+    li.className = 'file-item';
+    li.id = 'fileItem_' + i;
+    li.innerHTML = `
+      <span class="file-type-icon">${getFileIcon(f)}</span>
+      <div class="file-info">
+        <div class="file-name">${escHtml(f.name)}</div>
+        <div class="file-size">${formatSize(f.size)}</div>
+        <div class="file-status" id="fileStatus_${i}" style="display:none"></div>
+        <div class="progress-bar" id="progressBar_${i}" style="display:none">
+          <div class="progress-fill" id="progressFill_${i}"></div>
+        </div>
+      </div>
+      <button class="file-remove" id="removeBtn_${i}" aria-label="削除">✕</button>
+    `;
+    li.querySelector('.file-remove').addEventListener('click', () => removeFile(i));
+    list.appendChild(li);
+  });
+}
+
+function updateUploadButton() {
+  const btn = document.getElementById('btnUpload');
+  const ready = !isUploading && !!selectedFolder && selectedFiles.length > 0;
+  btn.disabled = !ready;
+  btn.textContent = selectedFiles.length > 0
+    ? `アップロード開始 (${selectedFiles.length}件)`
+    : 'アップロード開始';
+}
+
+// ===== Upload =====
+async function startUpload() {
+  if (!selectedFolder || selectedFiles.length === 0 || isUploading) return;
+  isUploading = true;
+  updateUploadButton();
+
+  const statusMsg = document.getElementById('statusMsg');
+  statusMsg.style.display = 'none';
+  statusMsg.className = 'status-msg';
+
+  // Hide remove buttons during upload
+  selectedFiles.forEach((_, i) => {
+    const btn = document.getElementById('removeBtn_' + i);
+    if (btn) btn.style.display = 'none';
+  });
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (let i = 0; i < selectedFiles.length; i++) {
+    const file = selectedFiles[i];
+    const progressBar = document.getElementById('progressBar_' + i);
+    const progressFill = document.getElementById('progressFill_' + i);
+    const fileStatus = document.getElementById('fileStatus_' + i);
+
+    if (progressBar) progressBar.style.display = 'block';
+    if (fileStatus) { fileStatus.style.display = 'block'; fileStatus.textContent = 'アップロード中...'; }
+
+    try {
+      await uploadFile(file, selectedFolder.id, (pct) => {
+        if (progressFill) progressFill.style.width = pct + '%';
+      });
+      if (progressFill) { progressFill.style.width = '100%'; progressFill.className = 'progress-fill success'; }
+      if (fileStatus) { fileStatus.textContent = '✓ 完了'; fileStatus.style.color = 'var(--success)'; }
+      successCount++;
+    } catch (e) {
+      if (progressFill) progressFill.className = 'progress-fill error';
+      if (fileStatus) { fileStatus.textContent = '✗ ' + e.message; fileStatus.style.color = 'var(--error)'; }
+      errorCount++;
+      console.error('Upload error:', e);
+    }
+  }
+
+  isUploading = false;
+
+  if (errorCount === 0) {
+    showStatus(`✅ ${successCount}件のアップロードが完了しました！`, 'success');
+    setTimeout(() => {
+      selectedFiles = [];
+      renderFileList();
+      updateUploadButton();
+      statusMsg.style.display = 'none';
+      statusMsg.className = 'status-msg';
+    }, 3000);
+  } else {
+    showStatus(
+      `完了: ${successCount}件成功 / ${errorCount}件失敗`,
+      errorCount === selectedFiles.length ? 'error' : 'success'
+    );
+    updateUploadButton();
+    // Re-show remove buttons for failed items
+    selectedFiles.forEach((_, i) => {
+      const btn = document.getElementById('removeBtn_' + i);
+      if (btn) btn.style.display = 'block';
+    });
+  }
+}
+
+async function uploadFile(file, folderId, onProgress) {
+  const contentType = file.type || 'application/octet-stream';
+
+  // Step 1: Initiate resumable upload session
+  const metadata = { name: file.name, parents: [folderId] };
+  const initResp = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json',
+        'X-Upload-Content-Type': contentType,
+        'X-Upload-Content-Length': String(file.size),
+      },
+      body: JSON.stringify(metadata),
+    }
+  );
+
+  if (!initResp.ok) {
+    const text = await initResp.text();
+    throw new Error(`セッション開始失敗 (${initResp.status}): ${text.substring(0, 120)}`);
+  }
+
+  const uploadUri = initResp.headers.get('Location');
+  if (!uploadUri) throw new Error('アップロードURIが取得できませんでした');
+
+  // Step 2: Upload with XHR for progress tracking
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUri);
+    xhr.setRequestHeader('Content-Type', contentType);
+
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) onProgress((e.loaded / e.total) * 100);
+    });
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200 || xhr.status === 201) {
+        onProgress(100);
+        try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({}); }
+      } else {
+        reject(new Error(`アップロード失敗 (${xhr.status})`));
+      }
+    });
+    xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')));
+    xhr.addEventListener('abort', () => reject(new Error('中断されました')));
+    xhr.send(file);
+  });
+}
+
+// ===== Helpers =====
+function showStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg ' + type;
+}
+
+function getFileIcon(file) {
+  const t = file.type || '';
+  if (t.startsWith('image/')) return '🖼️';
+  if (t.startsWith('video/')) return '🎬';
+  if (t === 'application/pdf') return '📄';
+  return '📎';
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+}
+
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ===== Event listeners =====
+document.getElementById('loginBtn').addEventListener('click', signIn);
+document.getElementById('btnLogout').addEventListener('click', signOut);
+document.getElementById('btnBack').addEventListener('click', goBack);
+document.getElementById('btnSelectFolder').addEventListener('click', selectCurrentFolder);
+document.getElementById('btnChange').addEventListener('click', changeFolder);
+document.getElementById('btnUpload').addEventListener('click', startUpload);
+
+document.getElementById('uploadArea').addEventListener('click', () => {
+  document.getElementById('fileInput').click();
+});
+document.getElementById('fileInput').addEventListener('change', e => {
+  onFilesSelected(e.target.files);
+});
+
+// Drag and drop (for desktop)
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  if (e.dataTransfer.files.length > 0) onFilesSelected(e.dataTransfer.files);
+});
+</script>
+</body>
+</html>
